@@ -20,7 +20,6 @@ export default function BookingPage({ room, onBack, onBookingComplete }: Booking
         contactNumber: "",
     });
     const [errorMessage, setErrorMessage] = useState("");
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const isRoomAvailable = room.is_available ?? room.available;
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,71 +111,7 @@ export default function BookingPage({ room, onBack, onBookingComplete }: Booking
 
 
 
-    const handleDeleteBooking = async () => {
-        setStatus("deleting");
-        setErrorMessage("");
 
-        try {
-            // Convert room.id to integer if it's a string
-            const roomId = typeof room.id === 'string' ? parseInt(room.id, 10) : room.id;
-
-            // Delete the booking record from database
-            const { error: deleteError } = await supabase
-                .from("bookings")
-                .delete()
-                .eq("room_id", roomId)
-                .eq("booking_status", "confirmed");
-
-            if (deleteError) {
-                console.error("Delete booking error:", deleteError);
-                setErrorMessage("Failed to delete booking. Please try again.");
-                setStatus("error");
-                return;
-            }
-
-            // Mark room as available again
-            const { error: updateError } = await supabase
-                .from("rooms")
-                .update({ is_available: true })
-                .eq("id", roomId);
-
-            if (updateError) {
-                console.error("Room availability update error:", updateError);
-            }
-
-            setStatus("deleted");
-            // Notify parent to refresh rooms list
-            if (onBookingComplete) {
-                onBookingComplete('deleted');
-            }
-        } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : String(err);
-            console.error("Delete booking error:", errorMessage);
-            setErrorMessage(`Failed to delete booking: ${errorMessage}`);
-            setStatus("error");
-        }
-    };
-
-    if (status === "deleted") {
-        return (
-            <div className="min-h-[calc(100vh-200px)] bg-zinc-50 flex flex-col items-center justify-center p-4">
-                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white p-8 rounded-[8px] shadow-xl text-center max-w-md w-full border-t-4 border-red-500">
-                    <div className="w-16 h-16 text-red-500 mx-auto mb-4 text-4xl">🗑️</div>
-                    <h2 className="text-3xl font-bold text-[#001D4A] mb-2">Booking Deleted</h2>
-                    <p className="text-zinc-600 mb-2 font-medium">All booking details for <strong className="text-zinc-900 border-b-2 border-red-400">{room.room_number || `Room`}</strong> have been permanently deleted.</p>
-                    <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-[4px] mb-4">
-                        <p className="text-[13px] font-bold">⚠️ All user data has been removed from the database</p>
-                    </div>
-                    <p className="text-zinc-600 mb-8 font-medium text-sm">
-                        Room is now AVAILABLE for new bookings.
-                    </p>
-                    <button onClick={onBack} className="bg-[#001D4A] active:scale-95 text-white px-6 py-3.5 rounded-[4px] font-bold w-full hover:bg-blue-900 transition-all shadow-md">
-                        Return to Property Viewer
-                    </button>
-                </motion.div>
-            </div>
-        );
-    }
 
     if (status === "success") {
         return (
@@ -214,17 +149,8 @@ export default function BookingPage({ room, onBack, onBookingComplete }: Booking
                         <div className="bg-white p-6 md:p-8 rounded-[8px] shadow-sm border border-zinc-200 mb-8">
                             <div className="flex justify-between items-center mb-8 border-b pb-4">
                                 <h2 className="text-[24px] font-bold text-[#001D4A]">Enter your booking details</h2>
-                                {!isRoomAvailable && (
                                     <div className="flex gap-3">
-
-                                        <button
-                                            onClick={() => setShowDeleteConfirm(true)}
-                                            className="bg-gray-50 hover:bg-gray-100 text-gray-600 px-4 py-2 rounded-[4px] font-bold text-sm border border-gray-200 transition-all active:scale-95"
-                                        >
-                                            Delete Booking
-                                        </button>
                                     </div>
-                                )}
                             </div>
                             
                             <form onSubmit={handleBook} className="space-y-6">
@@ -323,47 +249,6 @@ export default function BookingPage({ room, onBack, onBookingComplete }: Booking
 
 
 
-                {/* Delete Confirmation Dialog */}
-                {showDeleteConfirm && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="bg-white p-6 rounded-[8px] shadow-xl max-w-md w-full"
-                        >
-                            <h3 className="text-xl font-bold text-[#001D4A] mb-4">Delete Booking?</h3>
-                            <div className="bg-red-50 border border-red-200 p-4 rounded-[4px] mb-4">
-                                <p className="text-red-700 font-bold text-sm mb-2">⚠️ WARNING: This action cannot be undone!</p>
-                                <p className="text-red-600 text-sm">
-                                    This will permanently delete all booking details for <strong>{room.room_number}</strong> from the database.
-                                    All user information will be lost forever.
-                                </p>
-                            </div>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowDeleteConfirm(false)}
-                                    className="flex-1 bg-zinc-200 hover:bg-zinc-300 text-zinc-900 py-3 rounded-[4px] font-bold transition-all active:scale-95"
-                                >
-                                    Keep Booking
-                                </button>
-                                <button
-                                    onClick={handleDeleteBooking}
-                                    disabled={status === "deleting"}
-                                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-[4px] font-bold transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                >
-                                    {status === "deleting" ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                            Deleting...
-                                        </>
-                                    ) : (
-                                        "Yes, Delete Forever"
-                                    )}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
             </div>
         </motion.div>
     );

@@ -6,26 +6,38 @@ import { supabase } from "@/lib/supabaseClient";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
-import { LogOut, Mail, Calendar, CreditCard } from "lucide-react";
+import { LogOut, Mail, ChevronLeft, Calendar, Key, Loader2 } from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isBookingCancelled, setIsBookingCancelled] = useState(false);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [isHandlingCancel, setIsHandlingCancel] = useState(false);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndBookings = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error || !session) {
         router.push("/login");
         return;
       }
       setUser(session.user);
+      
+      const { data: userBookings } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("email", session.user.email)
+        .order("created_at", { ascending: false });
+        
+      if (userBookings) {
+        setBookings(userBookings);
+      }
+      
       setIsLoading(false);
     };
 
-    fetchUser();
+    fetchUserAndBookings();
   }, [router]);
 
   const handleLogout = async () => {
@@ -33,54 +45,29 @@ export default function ProfilePage() {
     router.push("/login");
   };
 
-  const handleCancelBooking = async () => {
-    if (confirm("Are you sure you want to cancel your booking?")) {
-      try {
-        // Step 1: Find the booking to get the room_id
-        const { data: userBookings, error: fetchError } = await supabase
-          .from("bookings")
-          .select("room_id")
-          .eq("email", user?.email);
+  const handleCancelBooking = async (bookingId: number, roomId: number) => {
+    if (!confirm("Are you sure you want to cancel and permanently delete this reservation?")) return;
+    
+    setIsHandlingCancel(true);
+    try {
+      const { error: deleteError } = await supabase
+        .from("bookings")
+        .delete()
+        .eq("id", bookingId);
 
-        if (fetchError) {
-          console.warn("Error fetching booking details:", fetchError.message || fetchError);
-        }
-
-        if (userBookings && userBookings.length > 0) {
-          const roomId = userBookings[0].room_id;
-          
-          // Step 2: Permanently delete the booking
-          const { error: deleteError } = await supabase
-            .from("bookings")
-            .delete()
-            .eq("email", user?.email);
-
-          if (deleteError) {
-             console.warn("Delete warning:", deleteError.message || deleteError);
-             alert("Could not fully delete the booking. Marking cancelled locally.");
-          }
-
-          // Step 3: Make the room available (true) in the rooms table
-          if (roomId) {
-            const { error: roomError } = await supabase
-              .from("rooms")
-              .update({ is_available: true })
-              .eq("id", roomId);
-              
-            if (roomError) {
-              console.warn("Room availability update warning:", roomError.message || roomError);
-            }
-          }
-        } else {
-          // If no booking found, it was just a mocked booking anyway
-          console.warn("No active booking found in Supabase for this user email.");
-        }
-        
-        setIsBookingCancelled(true);
-      } catch (e: any) {
-        console.warn("Exception during cancellation:", e?.message || e);
-        setIsBookingCancelled(true);
+      if (deleteError) {
+         alert("Could not delete the booking.");
+      } else {
+         if (roomId) {
+            await supabase.from("rooms").update({ is_available: true }).eq("id", roomId);
+         }
+         // update local state to completely remove the cancelled booking from UI visually
+         setBookings(prev => prev.filter(b => b.id !== bookingId));
       }
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setIsHandlingCancel(false);
     }
   };
 
@@ -97,6 +84,14 @@ export default function ProfilePage() {
       <Navbar />
       <main className="min-h-[80vh] bg-zinc-50 py-12 px-4 md:px-8">
         <div className="max-w-4xl mx-auto">
+          {/* Back Button */}
+          <button 
+            onClick={() => router.push('/Home')} 
+            className="flex items-center gap-2 text-zinc-500 hover:text-[#003B95] font-bold mb-6 transition-colors active:scale-95 w-fit"
+          >
+            <ChevronLeft className="w-5 h-5" /> Back to Home
+          </button>
+
           {/* Header section */}
           <div className="bg-white rounded-lg p-6 md:p-8 shadow-sm border border-zinc-200 mb-8 relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
@@ -127,50 +122,50 @@ export default function ProfilePage() {
             </motion.div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <motion.div 
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ delay: 0.1 }}
-               className="bg-white rounded-lg p-6 md:p-8 shadow-sm border border-zinc-200"
-            >
-              <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-amber-500" />
-                Recent Booking
-              </h2>
-              <div className="p-4 border border-zinc-100 rounded bg-zinc-50/50">
-                {isBookingCancelled ? (
-                  <div className="flex flex-col items-center justify-center py-4 text-center">
-                    <p className="text-red-600 font-bold mb-1">Booking Cancelled</p>
-                    <p className="text-sm text-zinc-500">Your reservation for Brahama Seva 1 has been cancelled successfully.</p>
-                  </div>
-                ) : (
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-sm text-zinc-500 mb-1">Upcoming Stay</p>
-                      <p className="font-bold text-[#003B95]">Brahama Seva 1</p>
-                      <p className="text-sm text-zinc-600 mt-2">Check-in: Nov 25 • 2 Guests</p>
-                    </div>
-                    <button 
-                      onClick={handleCancelBooking}
-                      className="text-xs font-bold uppercase tracking-wider px-3 py-1.5 border border-red-200 text-red-600 rounded hover:bg-red-50 active:scale-95 transition-all"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
-            </motion.div>
+          {/* Real Bookings Section */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-serif text-[#002C6A] mb-6 flex items-center gap-2">
+                <Calendar className="w-6 h-6 text-amber-500" />
+                Your Active Reservations
+            </h2>
 
-            <motion.div 
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ delay: 0.2 }}
-               className="bg-white rounded-lg p-6 md:p-8 shadow-sm border border-zinc-200"
-            >
-              
-              
-            </motion.div>
+            {bookings.length === 0 ? (
+                <div className="bg-white rounded-lg p-12 text-center shadow-sm border border-zinc-200">
+                    <p className="text-zinc-500 mb-4">You have no active or upcoming bookings.</p>
+                    <button onClick={() => router.push('/Home')} className="text-[#003B95] font-bold hover:underline">Explore properties &rarr;</button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {bookings.map((booking) => (
+                        <motion.div key={booking.id || booking.created_at} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-lg p-6 shadow-sm border border-zinc-200 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 bg-green-100/50 text-green-700 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-lg border-b border-l border-green-200">
+                                {booking.booking_status || "Confirmed"}
+                            </div>
+                            <h3 className="text-lg font-bold text-[#001D4A] mb-1">{booking.room_number || "Reserved Room"}</h3>
+                            <p className="text-sm text-zinc-500 mb-4 flex items-center gap-1"><Key className="w-3 h-3"/> Checked Under: {booking.first_name} {booking.last_name}</p>
+                            
+                            <div className="bg-zinc-50 p-3 rounded border border-zinc-100 mb-4 flex justify-between">
+                                <div>
+                                    <p className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Check-In</p>
+                                    <p className="text-sm font-medium">{booking.check_in_date ? new Date(booking.check_in_date).toLocaleDateString() : 'N/A'}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider">Total</p>
+                                    <p className="text-sm font-bold text-[#003B95]">${booking.total_price}</p>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={() => handleCancelBooking(booking.id, booking.room_id)}
+                                disabled={isHandlingCancel}
+                                className="w-full text-xs font-bold uppercase tracking-widest py-2.5 border border-red-200 text-red-600 rounded flex justify-center items-center gap-2 hover:bg-red-50 disabled:opacity-50 transition-all active:scale-[0.98]"
+                            >
+                                {isHandlingCancel ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cancel & Delete Reservation"}
+                            </button>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
           </div>
         </div>
       </main>

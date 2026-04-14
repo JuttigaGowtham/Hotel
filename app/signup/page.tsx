@@ -80,7 +80,7 @@ export default function SignupPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95] transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95] transition-all text-black"
                     placeholder="John Doe"
                   />
                 </div>
@@ -95,7 +95,7 @@ export default function SignupPage() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95] transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95] transition-all text-black"
                     placeholder="Enter your email"
                   />
                 </div>
@@ -110,7 +110,7 @@ export default function SignupPage() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95] transition-all"
+                    className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-md outline-none focus:border-[#003B95] focus:ring-1 focus:ring-[#003B95] transition-all text-black"
                     placeholder="••••••••"
                   />
                 </div>
