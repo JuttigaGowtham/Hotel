@@ -19,12 +19,12 @@ export default function SplashPage() {
 
   const handleAnimationComplete = () => {
     if (stage === "exiting") {
-      router.push("/signup");
+      router.push("/Home");
     }
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-zinc-950 overflow-hidden px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-zinc-950 overflow-hidden">
       {/* Background ambient glow */}
       <motion.div
         className="absolute inset-0 z-0"
@@ -32,14 +32,14 @@ export default function SplashPage() {
         animate={{ opacity: 1 }}
         transition={{ duration: 2 }}
       >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] md:w-[60vw] md:h-[60vw] rounded-full bg-amber-500/10 blur-[80px] md:blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full bg-amber-500/10 blur-[100px]" />
       </motion.div>
 
       <AnimatePresence onExitComplete={handleAnimationComplete}>
         {stage === "entering" && (
           <motion.div
             key="logo-container"
-            className="z-10 flex flex-col items-center w-full max-w-sm"
+            className="z-10 flex flex-col items-center"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
@@ -92,7 +92,7 @@ export default function SplashPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
-              className="text-4xl md:text-6xl font-light tracking-[0.2em] text-white text-center uppercase leading-tight w-full"
+              className="text-4xl md:text-6xl font-light tracking-[0.2em] text-white text-center uppercase"
               style={{ fontFamily: "Georgia, serif" }}
             >
               Lumina
@@ -102,7 +102,7 @@ export default function SplashPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 1.5 }}
-              className="mt-4 text-xs md:text-base tracking-[0.3em] text-zinc-400 uppercase text-center w-full"
+              className="mt-4 text-sm md:text-base tracking-[0.3em] text-zinc-400 uppercase text-center"
             >
               Hotels & Resorts
             </motion.p>
@@ -112,7 +112,7 @@ export default function SplashPage() {
               initial={{ width: 0 }}
               animate={{ width: "40px" }}
               transition={{ duration: 1, delay: 1.8, ease: "easeInOut" }}
-              className="mt-6 md:mt-8 h-[1px] bg-amber-500"
+              className="mt-8 h-[1px] bg-amber-500"
             />
           </motion.div>
         )}
